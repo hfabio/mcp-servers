@@ -1,14 +1,20 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import {YouTubeTools} from './tools';
+import * as MCPTools from './tools';
 
 const server = new McpServer({
   name: "example-server",
   version: "1.0.0"
 });
 
-for (const tool of YouTubeTools) {
-  server.tool(...tool);
-}
+Object.values(MCPTools).forEach((tools) => {
+  for (const tool of tools) {
+    // @ts-ignore
+    server.tool(...tool);
+  }
+})
+// for (const tool of YouTubeTools) {
+//   server.tool(...tool);
+// }
 
 export default server;

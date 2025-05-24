@@ -74,5 +74,6 @@ app
 
 const port = process.env.PORT || '3232'
 app.listen(port, () => {
+  console.clear();
   console.log(`server started on http://localhost:${port}/`);
 });
