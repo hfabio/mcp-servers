@@ -70,10 +70,10 @@ export const getVideoList: MCPTool = [
       }
     })
 
-    console.log("YouTube API response time:", (performance.now() - init)/1000, "s");
-    console.log("Request total results:", response.pageInfo?.totalResults);
-    console.log("Request kind:", response.kind);
-    console.log("YouTube API response:", response.items.length);
+    console.log("[YouTube] API response time:", (performance.now() - init)/1000, "s");
+    console.log("[Youtube] Request total results:", response.pageInfo?.totalResults);
+    console.log("[Youtube] Request kind:", response.kind);
+    console.log("[YouTube] API response:", response.items.length);
 
     return {
       content: [
