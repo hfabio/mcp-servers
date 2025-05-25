@@ -1,10 +1,12 @@
 import z from "zod";
-import { MCPTool } from "../@types";
+import { MCPResponse, MCPTool } from "../@types";
 import { TwitterApi } from "twitter-api-v2";
 import { searchTweetsSchema } from "./validators";
+import { createCacheFile } from "utils/cache";
 
 const twitterClient = new TwitterApi(process.env.TWITTER_BEARER_TOKEN as string);
 const readOnlyClient = twitterClient.readOnly.v2;
+const writeCache = createCacheFile('YouTube');
 
 export const searchTweets: MCPTool = [
   "search-tweets",
@@ -24,13 +26,17 @@ export const searchTweets: MCPTool = [
         break;
       }
     }
-    return {
-      content: tweetsRequest?.data?.map?.((tweet) => ({
+    const data = tweetsRequest?.data || []
+    const payload: MCPResponse = {
+      content: data?.map?.((tweet) => ({
         type: "text",
         text: tweet.text,
         url: `https://twitter.com/${tweet.author_id}/status/${tweet.id}`,
       })) || [],
     };
+    writeCache('search-subreddit', 'raw-data', data);
+    writeCache('search-subreddit', 'response', payload);
+    return payload;
   },
 ]
 

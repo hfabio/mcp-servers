@@ -1,6 +1,7 @@
 import { YoutubeTranscript } from 'youtube-transcript';
-import { MCPTool } from "../@types"
+import { MCPResponse, MCPTool } from "../@types"
 import { z } from "zod"
+import { createCacheFile } from "../utils/cache"
 
 const {YOUTUBE_API_KEY, YOUTUBE_API_URL} = process.env;
 
@@ -41,6 +42,8 @@ const getVideoTranscription = async (videoId: string) => {
   //   `${YOUTUBE_API_URL}/captions/${transcriptId}?tlang=en`
   // ).then((result) => result.json());
 };
+
+const writeCache = createCacheFile('YouTube');
 
 export const getVideoList: MCPTool = [
   "search-youtube-videos",
@@ -87,7 +90,7 @@ export const getVideoList: MCPTool = [
     console.log("[Youtube] Request kind:", response.kind);
     console.log("[YouTube] API response:", response.items.length);
 
-    return {
+    const payload: MCPResponse = {
       content: [
         {
           type: "text", 
@@ -103,6 +106,9 @@ export const getVideoList: MCPTool = [
         }
       ]
     };
+    writeCache('search-youtube-videos', 'raw-data', response);
+    writeCache('search-youtube-videos', 'response', payload);
+    return payload
   }
 ];
 

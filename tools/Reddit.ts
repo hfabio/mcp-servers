@@ -1,7 +1,8 @@
 import z from "zod";
-import { MCPTool } from "../@types";
+import { MCPResponse, MCPTool, ParsedRedditComment, RedditComment, RedditPostParsed, Subreddit } from "../@types";
 import { searchRedditPostSchema, searchRedditSubredditSchema } from "./validators";
 import { getCredentials, writeCredentials } from '../utils/credentials';
+import { createCacheFile } from "../utils/cache";
 
 const {
   REDDIT_API_URL,
@@ -13,6 +14,8 @@ const {
 } = process.env;
 
 const userAgent = `node:${REDDIT_APPLICATION_NAME}:v1.0.0 (by /u/${REDDIT_USERNAME})`;
+
+const writeCache = createCacheFile('Reddit');
 
 async function getAccessToken() {
   if (!REDDIT_CLIENT_ID || !REDDIT_CLIENT_SECRET || !REDDIT_USERNAME || !REDDIT_PASSWORD) {
@@ -65,7 +68,7 @@ const getHeaders = async () => {
   };
 }
 
-const parseComment = (comment, isReply = false) => {
+const parseComment = (comment: RedditComment, isReply = false): ParsedRedditComment => {
   const {
     author,
     body,
@@ -82,7 +85,7 @@ const parseComment = (comment, isReply = false) => {
   parsedComment += `${permission === 'moderator' ? ' (moderator)' : ''}${stickied ? ' **stickied reply**' : ''}`;
   parsedComment += `\n${''.padStart(depth, '\t')}${body}`;
   parsedComment += `\n${''.padStart(depth, '\t')}Created at: ${new Date(created * 1000).toLocaleString()}`;
-  parsedComment += `\n${''.padStart(depth, '\t')}Score: ${score} (${ups} upvotes, ${downs} downvotes)\n`;
+  parsedComment += `\n${''.padStart(depth, '\t')}Score: ${score} (${ups} up-votes, ${downs} down-votes)\n`;
 
   return {
     parsedComment,
@@ -95,11 +98,11 @@ const parseComment = (comment, isReply = false) => {
     stickied,
     depth,
     created,
-    replies: replies?.data?.children.map(child => parseComment(child, true)),
+    replies: replies?.data?.children.map((child) => parseComment(child, true)),
   };
 }
 
-const parseSubreddit = (subreddit) => {
+const parseSubreddit = (subreddit: Subreddit) => {
   const {
     title,
     display_name_prefixed,
@@ -122,7 +125,7 @@ const parseSubreddit = (subreddit) => {
   parsedSubreddit = parsedSubreddit.replace(/<[^>]*>/g, ''); // Remove HTML tags
   parsedSubreddit = parsedSubreddit.replace(/&[a-zA-Z0-9#]+;/g, ''); // Remove HTML entities
   parsedSubreddit = parsedSubreddit.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width characters
-  parsedSubreddit = parsedSubreddit.replace(/ +/g, ' ').replaceAll('[]', '').trim(); // Remove extra spaces
+  parsedSubreddit = parsedSubreddit.replace(/ +/g, ' ').replace(/\[\]/g, '').trim(); // Remove extra spaces
   const parsedSubredditTokens = Math.ceil(parsedSubreddit.length / 4);
   return {
     display_name_prefixed,
@@ -140,7 +143,7 @@ const parseSubreddit = (subreddit) => {
   }
 }
 
-async function getPostData(subreddit, maxComments = 10, maxDepth = 2) {
+async function getPostData(subreddit: Subreddit, maxComments = 10, maxDepth = 2): Promise<RedditPostParsed> {
   const {
     title,
     author,
@@ -164,7 +167,7 @@ async function getPostData(subreddit, maxComments = 10, maxDepth = 2) {
     if (test[1]?.data?.children?.length > 0) {
       outerReplies = test[1].data.children.map(parseComment);
       let replies = '';
-      outerReplies.forEach((reply, index) => {
+      outerReplies.forEach((reply: { parsedComment: string; replies: any; }, index: number) => {
         if ((index + 1) >= maxComments) return;
         replies += reply.parsedComment;
         let depthReplies = [...(reply.replies || [])];
@@ -216,17 +219,6 @@ export const searchSubreddit: MCPTool = [
     } = z.object(searchRedditSubredditSchema).parse(params);
 
     try {
-      // const response = await fetch(`${REDDIT_API_URL}/search_subreddits`, {
-      //     method: 'POST',
-      //     headers: await getHeaders(),
-      //     body: JSON.stringify({
-      //         exact: false,
-      //         include_over_18: false,
-      //         include_unadvertisable: false,
-      //         query: sanitizedQuery,
-      //         limit: 10,
-      //     })
-      // }).then(result => result.json())
       let url = `${REDDIT_API_URL?.replace('/api', '')}/subreddits/search?`;
       if (count) url += `count=${count}&`;
       if (limit) url += `limit=${limit}&`;
@@ -244,16 +236,21 @@ export const searchSubreddit: MCPTool = [
           throw new Error(`Erro ao buscar subreddits: ${errorText}`);
         });
       console.log('[Reddit] API subreddits response time:', (performance.now() - init) / 1000, "s");
-      const data = response.data.children.map(child => parseSubreddit(child.data));
-      const total_tokens = data.reduce((acc, curr) => acc + curr.parsedSubredditTokens, 0)
+      const data = response.data.children.map((child: { data: any; }) => parseSubreddit(child.data));
+      const total_tokens = data.reduce(
+        (acc: number, curr: { parsedSubredditTokens: number; }) => acc + curr.parsedSubredditTokens
+        , 0)
       console.log(`[Reddit] Subreddits fetched (${query}), ${data.length} subreddits with total ${total_tokens} tokens`);
       console.log(`[Reddit] Subreddits fetched (${query}) in ${(performance.now() - init) / 1000}s`);
-      return {
-        content: data.map((subreddit) => ({
+      const payload = {
+        content: data.map((subreddit: { parsedSubreddit: string; }) => ({
           type: 'text',
           text: subreddit.parsedSubreddit,
         })),
       };
+      writeCache('search-subreddit', 'raw-data', data);
+      writeCache('search-subreddit', 'response', payload);
+      return payload;
     } catch (error) {
       console.error('Erro ao buscar subreddits:', error);
       throw error;
@@ -288,16 +285,22 @@ export const searchPosts: MCPTool = [
       console.log('[Reddit] API posts response time:', (performance.now() - init) / 1000, "s");
       const init2 = performance.now();
       console.log(`[Reddit] Getting replies (${query})`);
-      const data = await Promise.all(response.data.children.map(child => getPostData(child.data, max_comments, depth)));
+      const data: RedditPostParsed[] = await Promise.all(response.data.children.map(
+        (child: { data: Subreddit }) => getPostData(child.data, max_comments, depth))
+      );
+      const tokens = data.reduce((acc, curr) => acc + curr.sanitizedResponseTokens, 0);
       console.log('[Reddit] API replies response time:', (performance.now() - init2) / 1000, "s");
-      console.log(`[Reddit] Posts fetched (${query}), ${data.length} posts with total ${data.reduce((acc, curr) => acc + curr.sanitizedResponseTokens, 0)} tokens`);
+      console.log(`[Reddit] Posts fetched (${query}), ${data.length} posts with total ${tokens} tokens`);
       console.log(`[Reddit] Posts fetched (${query}) in ${(performance.now() - init) / 1000}s`);
-      return {
+      const payload: MCPResponse = {
         content: data.map((post) => ({
           type: 'text',
           text: post.sanitizedResponse,
         }))
       };
+      writeCache('search-subreddit', 'raw-data', data);
+      writeCache('search-subreddit', 'response', payload);
+      return payload;
     } catch (error) {
       console.error('Erro ao buscar posts:', error);
       throw error;

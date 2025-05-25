@@ -2,6 +2,9 @@ import express from "express";
 import server from "./server.js";
 import cors from "cors";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { getTemplate } from "utils/cache.js";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 app.use(express.json());
@@ -10,7 +13,6 @@ app.use(cors({
   methods: ["POST", "GET", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-
 
 // Map to store transports by session ID
 app
@@ -68,6 +70,29 @@ app
       });
     }
   }
+});
+
+app.get("/cache/", (req, res) => {
+  const template = getTemplate();
+  res.setHeader("Content-Type", "text/html");
+  res.send(template);
+});
+app.get("/cache/:context/", (req, res) => {
+  const { context } = req.params;
+  const template = getTemplate(context);
+  res.setHeader("Content-Type", "text/html");
+  res.send(template);
+});
+app.get("/cache/:context/:toolName/", (req, res) => {
+  const { context, toolName } = req.params;
+  const template = getTemplate(context, toolName);
+  res.setHeader("Content-Type", "text/html");
+  res.send(template);
+});
+app.get("/cache/:context/:toolName/:type", (req, res) => {
+  const { context, toolName, type } = req.params;
+  const file = fs.readFileSync(path.resolve("cache", context, toolName, type), "utf-8");
+  res.send(JSON.parse(file));
 });
 
 const port = process.env.PORT || '3232'
