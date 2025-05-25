@@ -7,7 +7,7 @@ const twitterClient = new TwitterApi(process.env.TWITTER_BEARER_TOKEN as string)
 const readOnlyClient = twitterClient.readOnly.v2;
 
 export const searchTweets: MCPTool = [
-  "searchTweets",
+  "search-tweets",
   "Search Tweets",
   searchTweetsSchema,
   async (props) => {
