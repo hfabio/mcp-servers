@@ -20,7 +20,9 @@ export const getTemplate = (context?: string, toolName?: string, type?: string) 
   if (toolName) title = ' - ' + toolName;
   if (type) title = ' - ' + type;
 
-  const files = fs.readdirSync(path.resolve(...['cache', context, toolName].filter(Boolean) as string[]));
+  const files = fs.readdirSync(
+    path.resolve(...['cache', context, toolName].filter(Boolean) as string[])
+  ).filter((file) => !file.startsWith('.'));
   const template = `
   <html>
   <head>
