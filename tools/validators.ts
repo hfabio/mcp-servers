@@ -18,3 +18,10 @@ export const searchRedditSubredditSchema = {
   sort: z.enum(['relevance', 'activity']).default('relevance'),
   sub_reddit_details: z.boolean().default(false),
 }
+
+export const searchTweetsSchema = {
+  query: z.string().describe("The search query"),
+  maxResults: z.number().default(25).describe("The maximum number of results to return"),
+  lang: z.string().optional().describe("The language of the tweets"),
+  resultType: z.enum(["recent", "popular", "mixed"]).default("popular").describe("The type of results to return"),
+}

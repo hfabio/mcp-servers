@@ -1,4 +1,4 @@
-import transcriptApi from "youtube-transcript-api";
+import { YoutubeTranscript } from 'youtube-transcript';
 import { MCPTool } from "../@types"
 import { z } from "zod"
 
@@ -14,10 +14,21 @@ const getVideoListSchema = {
 
 const getVideoTranscription = async (videoId: string) => {
   try {
-    const transcription = await transcriptApi.getTranscript(videoId);
-    return transcription.map((item: any) => item.text).join(" ");
-  } catch (error) {
-    console.error("Error fetching transcription:", videoId, error.message);
+    const transcription = await YoutubeTranscript.fetchTranscript(videoId);
+    return transcription.map((item: any) => {
+      let sanitizedText = item.text.replace(/<[^>]*>/g, ""); // Remove HTML tags
+      sanitizedText = sanitizedText.replace(/&[a-z]+;/g, ""); // Remove HTML entities
+      sanitizedText = sanitizedText.replace(/[\u200B-\u200D\uFEFF]/g, ""); // Remove zero-width characters
+      sanitizedText = sanitizedText.replace(/ +/g, " "); // Replace multiple spaces with a single space
+      sanitizedText = sanitizedText.trim(); // Trim leading and trailing spaces
+      return sanitizedText;
+    }).join(" ");
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error fetching transcription:", videoId, error.message);
+    } else {
+      console.error("Error fetching transcription:", videoId, error);
+    }
     // const test = await fetch(`http://video.google.com/timedtext?lang=en&v=${videoId}`).then((result) => result.text());
     // const test = await fetch(`https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`).then((result) => result.text());
     return 'No transcription available';
@@ -33,6 +44,7 @@ const getVideoTranscription = async (videoId: string) => {
 
 export const getVideoList: MCPTool = [
   "search-youtube-videos",
+  "search for youtube videos based on a query and returns the video list with optional transcript",
   getVideoListSchema,
   async ({ query, max_results, start_date, end_date, include_transcript }) => {
     const {
@@ -81,11 +93,11 @@ export const getVideoList: MCPTool = [
           type: "text", 
           text: `Found ${response.items.length} videos for "${sanitizedQuery}":
           ${response.items.map(
-            (item: any, index: number) => `Video #${index+1
+            (item: any, index: number) => `# Video #${index + 1
             } Title: ${item.snippet.title
-            }\nDescription: ${item.snippet.description
-            }\nLink: https://www.youtube.com/watch?v=${item.id.videoId
-            }${includeTranscript ? `\nTranscription: ${item.transcription}` : ""}`
+              }\n- Description: ${item.snippet.description
+              }\n- Link: https://www.youtube.com/watch?v=${item.id.videoId
+              }${includeTranscript ? `\n- Transcription: ${item.transcription}` : ""}`
         ).join("\n\n")}
           `.trim(),
         }

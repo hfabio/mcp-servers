@@ -13,8 +13,6 @@ app.use(cors({
 
 
 // Map to store transports by session ID
-const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
-
 app
 // Handle GET requests for server-to-client notifications via SSE
 .get('/', async (req, res) => {

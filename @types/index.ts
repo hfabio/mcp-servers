@@ -15,4 +15,4 @@ export type MCPResponse = {
     text?: string;
   }>;
 }
-export type MCPTool = [string, {[key: string]: any}, (args: any) => Promise<MCPResponse>];
+export type MCPTool = [string, string, { [key: string]: any }, (args: any) => Promise<MCPResponse>];
