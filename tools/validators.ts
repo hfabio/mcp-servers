@@ -1,5 +1,13 @@
 import z from "zod";
 
+export const getVideoListSchema = {
+    query: z.string(),
+    include_transcript: z.boolean().default(true),
+    max_results: z.number().default(5),
+    start_date: z.string().datetime().default(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+    end_date: z.string().datetime().default(new Date().toISOString()),
+};
+
 export const searchRedditPostSchema = {
   subreddit: z.string().optional(),
   query: z.string(),

@@ -2,16 +2,9 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import { MCPResponse, MCPTool } from "../@types"
 import { z } from "zod"
 import { createCacheFile } from "../utils/cache"
+import { getVideoListSchema } from './validators';
 
 const {YOUTUBE_API_KEY, YOUTUBE_API_URL} = process.env;
-
-const getVideoListSchema = {
-    query: z.string(),
-    include_transcript: z.boolean().default(true),
-    max_results: z.number().default(5),
-    start_date: z.string().datetime().default(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-    end_date: z.string().datetime().default(new Date().toISOString()),
-};
 
 const getVideoTranscription = async (videoId: string) => {
   try {
@@ -30,17 +23,8 @@ const getVideoTranscription = async (videoId: string) => {
     } else {
       console.error("Error fetching transcription:", videoId, error);
     }
-    // const test = await fetch(`http://video.google.com/timedtext?lang=en&v=${videoId}`).then((result) => result.text());
-    // const test = await fetch(`https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`).then((result) => result.text());
     return 'No transcription available';
   }
-  // const response = await fetch(
-  //   `${YOUTUBE_API_URL}/captions?videoId=${videoId}&key=${YOUTUBE_API_KEY}`
-  // ).then((result) => result.json());
-  // const transcriptId = response.items[0]?.id;
-  // const transcription = await fetch(
-  //   `${YOUTUBE_API_URL}/captions/${transcriptId}?tlang=en`
-  // ).then((result) => result.json());
 };
 
 const writeCache = createCacheFile('YouTube');
