@@ -298,7 +298,7 @@ export const searchPosts: MCPTool = [
           text: post.sanitizedResponse,
         }))
       };
-      writeCache('search-subreddit', 'raw-data', data);
+      writeCache('search-subreddit', 'raw-data', {subreddit, query, depth, max_comments, response: data});
       writeCache('search-subreddit', 'response', payload);
       return payload;
     } catch (error) {

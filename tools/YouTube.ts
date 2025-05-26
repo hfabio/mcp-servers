@@ -90,7 +90,7 @@ export const getVideoList: MCPTool = [
         }
       ]
     };
-    writeCache('search-youtube-videos', 'raw-data', response);
+    writeCache('search-youtube-videos', 'raw-data', {query, maxResults, startDate, endDate, response});
     writeCache('search-youtube-videos', 'response', payload);
     return payload
   }
